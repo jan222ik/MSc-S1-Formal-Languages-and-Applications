@@ -1,0 +1,95 @@
+options {
+    STATIC = false;
+}
+PARSER_BEGIN(JustParser)
+package root;
+    public class JustParser {
+
+      public JustParser() { } /** root.Main entry point. */
+
+      public static JustParser instance;
+
+      public static void main(String args[]) throws ParseException {
+        //JustParser.readInput(System.in);
+      }
+
+      public static void readInput(String input) throws ParseException {
+          instance = new JustParser(new java.io.StringReader(input));
+          instance.parse();
+      }
+
+      public static void resetParser() {
+          if (instance == null) return;
+          instance.ReInit(instance.token_source);
+      }
+    }
+
+PARSER_END(JustParser)
+
+SKIP : {
+    " " |
+    "\t" |
+    "\n" |
+    "\r"
+}
+
+
+TOKEN : {
+    <PROGRAM: "program">
+    | <WHILE: "while">
+    | <IF: "if">
+    | <VOID: "void">
+    | <L_PARENTHESES : "(">
+    | <R_PARENTHESES : ")">
+    | <L_SQUARE_BRACKETS : "[">
+    | <R_SQUARE_BRACKETS : "]">
+    | <L_CURLY_BRACKETS : "{">
+    | <R_CURLY_BRACKETS : "}">
+    | <SEMICOLON : ";">
+    | <ASSIGN: "=">
+    | <#LETTER: ["a"-"z", "A"-"Z"]>
+    | <DIGIT: ["0"-"9"]>
+    | <NUMBER: (<DIGIT>)+("." (<DIGIT>)+)?>
+    | <PRIMITIVES: "boolean" | "int" | "float">
+    | <IDENTIFIER: <LETTER>(<LETTER>|<DIGIT>)*>
+}
+
+
+void parse() : {}
+{
+    ProgramBlock() <EOF>
+}
+
+void ProgramBlock() : {} {
+    <PROGRAM><IDENTIFIER><L_CURLY_BRACKETS>
+        (code())*
+    <R_CURLY_BRACKETS>
+}
+
+void code() : {} {
+    LOOKAHEAD(3) Function()
+    | LOOKAHEAD(3) Assignment()
+    | LOOKAHEAD(3) VariableDeclaration()
+    | LOOKAHEAD(3) DeclarationWithAssignment()
+}
+
+void Function() : {}
+{
+     (<VOID> | <PRIMITIVES>) <IDENTIFIER> <L_PARENTHESES> <R_PARENTHESES> <L_CURLY_BRACKETS>
+
+      <R_CURLY_BRACKETS>
+}
+
+void Assignment() : {} {
+    <IDENTIFIER><ASSIGN><NUMBER><SEMICOLON>
+}
+
+void VariableDeclaration() : {}
+{
+    <PRIMITIVES><IDENTIFIER> <SEMICOLON>
+}
+
+void DeclarationWithAssignment() : {}
+{
+    <PRIMITIVES><IDENTIFIER> <ASSIGN> <NUMBER> <SEMICOLON>
+}

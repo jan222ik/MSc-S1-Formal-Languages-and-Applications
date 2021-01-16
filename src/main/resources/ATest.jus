@@ -1,0 +1,13 @@
+
+program ATest {
+	int global;
+
+	int doIt(int i) {
+		return i;
+	}
+	void main() {
+		int a;
+   		a = doIt(10);
+   		global = a;
+   	}
+}
