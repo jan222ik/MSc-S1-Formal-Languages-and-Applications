@@ -55,6 +55,7 @@ TOKEN : {
     | <BOOLS: "true" | "false">
     | <IDENTIFIER: <LETTER>(<LETTER>|<DIGIT>)*>
     | <CONDITIONAL_OPERATIONS: "&&" | "||">
+    | <COMMA: ",">
 }
 
 
@@ -115,9 +116,19 @@ void expr() : {}
         | LOOKAHEAD(3) DeclarationWithAssignment()
 }
 
+void param() : {}
+{
+    <PRIMITIVES> <IDENTIFIER>
+}
+
+void params() : {}
+{
+    param() (<COMMA> param())*
+}
+
 void Function() : {}
 {
-     (<VOID> | <PRIMITIVES>) <IDENTIFIER> <L_PARENTHESES> <R_PARENTHESES> <L_CURLY_BRACKETS>
+     (<VOID> | <PRIMITIVES>) <IDENTIFIER> <L_PARENTHESES> [params()] <R_PARENTHESES> <L_CURLY_BRACKETS>
             (functionLevleDeclarations())*
       <R_CURLY_BRACKETS>
 }

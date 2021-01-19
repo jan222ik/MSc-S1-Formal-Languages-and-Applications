@@ -211,7 +211,6 @@ data class VariableAssignmentBuilder<T>(
         val indent = indent(indentLevel)
         return "$indent${assignment.name} = ${value?.getValueAsString()};"
     }
-
 }
 
 data class VariableBuilder<T>(
@@ -253,15 +252,44 @@ abstract class AbstractJustBuilder : JustBuilder {
     }
 }
 
-data class FunctionBuilder(var name: String, private var returnType: JustTypes) : AbstractJustBuilder(),
+typealias ParamPair = Pair<String, JustTypes>
+
+inline fun <reified T : JustTypes> FunctionBuilder.param(name: String) {
+    val type = JustTypes.resolve(T::class.java)
+    this.addToParamList(name to type)
+}
+
+data class ParamBuilder(
+    val parameters: MutableList<ParamPair> = mutableListOf()
+) : AbstractJustBuilder() {
+    override fun build(indentLevel: Int): String {
+        return parameters.joinToString(", ") { "${it.second.codeString()} ${it.first}" }
+    }
+
+
+
+}
+
+
+data class FunctionBuilder(
+    var name: String,
+    private var returnType: JustTypes,
+) : AbstractJustBuilder(),
     FunctionLevelDeclarationBuilder {
 
+    private val paramBuilder: ParamBuilder = ParamBuilder()
+
     override fun build(indentLevel: Int): String {
+        val paramString = paramBuilder.build(0)
         return """
-            |${returnType.codeString()} $name() {
+            |${returnType.codeString()} $name($paramString) {
             |${contentString(1)}
             |}
         """.trimMargin().indentAll(indentLevel)
+    }
+
+    fun addToParamList(pair: ParamPair) {
+        paramBuilder.parameters.add(pair)
     }
 }
 

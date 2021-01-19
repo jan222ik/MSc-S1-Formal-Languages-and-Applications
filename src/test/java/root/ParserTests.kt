@@ -12,6 +12,7 @@ import root.dsl.VariableDeclaration
 import root.dsl.WhileLoop
 import root.dsl.elseBlock
 import root.dsl.ifBlock
+import root.dsl.param
 
 class ParserTests {
     @Throws(Throwable::class)
@@ -139,6 +140,18 @@ class ParserTests {
                     Function<JustTypes.Void> {
                         addRaw(FunctionBuilder("insideFuncFunc", JustTypes.Void).build(1))
                     }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun functionWithParams() {
+        applyParser {
+            Program {
+                Function<JustTypes.Void> {
+                    param<JustTypes.Int>("param1")
+                    param<JustTypes.Boolean>("param2")
                 }
             }
         }
