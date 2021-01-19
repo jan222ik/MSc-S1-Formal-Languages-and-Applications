@@ -12,9 +12,16 @@ repositories {
     mavenCentral()
 }
 
+tasks.test {
+    useJUnitPlatform()
+    testLogging {
+        events("passed", "skipped", "failed")
+    }
+}
 
 dependencies {
     implementation(kotlin("stdlib"))
     compile(files("$buildDir/classes/java/main/"))
-    testCompile("junit", "junit", "4.12")
+    testImplementation(platform("org.junit:junit-bom:5.7.0"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
 }

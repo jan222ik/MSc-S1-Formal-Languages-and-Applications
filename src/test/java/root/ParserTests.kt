@@ -1,8 +1,10 @@
 package root
 
-import org.junit.Assert.fail
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.fail
 import root.dsl.Function
 import root.dsl.FunctionBuilder
 import root.dsl.JustTypes
@@ -14,56 +16,47 @@ import root.dsl.elseBlock
 import root.dsl.ifBlock
 import root.dsl.param
 
-class ParserTests {
-    @Throws(Throwable::class)
-    private fun applyParser(input: String) {
-        val lines = input.split("\n")
-        val numLength = lines.size.toString().length
-        val template = "%${numLength}d | %s"
-        println("input: \n" + lines.mapIndexed { i, s -> template.format(i, s) }.joinToString(separator = "\n"))
-        Main.createParser(input)
-    }
+@Throws(Throwable::class)
+private fun applyParser(input: String) {
+    val lines = input.split("\n")
+    val numLength = lines.size.toString().length
+    val template = "%${numLength}d | %s"
+    println("input: \n" + lines.mapIndexed { i, s -> template.format(i, s) }.joinToString(separator = "\n"))
+    Main.createParser(input)
+}
 
-    @Throws(Throwable::class)
-    private fun applyParser(supplier: () -> String) {
-        applyParser(supplier.invoke())
-    }
+@Throws(Throwable::class)
+private fun applyParser(supplier: () -> String) {
+    applyParser(supplier.invoke())
+}
 
-    private fun testForParseExceptionText(text: String, content: () -> Unit) {
-        try {
-            content()
+private fun testForParseExceptionText(text: String, content: () -> Unit) {
+    try {
+        content()
+        fail("Exception did not contain expected message text")
+    } catch (e: Exception) {
+        if (e.message?.contains(text) != true) {
             fail("Exception did not contain expected message text")
-        } catch (e: Exception) {
-            if (e.message?.contains(text) != true) {
-                fail("Exception did not contain expected message text")
-            }
         }
     }
+}
 
-    @Before
+class ParserTests {
+
+    @BeforeEach
     fun resetParser() {
         Main.restParser()
     }
 
     @Test
-    fun validEmptyProgram() {
+    fun `Empty Program`() {
         applyParser {
             Program("ATest")
         }
     }
 
     @Test
-    fun emptyProgram() {
-        testForParseExceptionText(
-            text = "Encountered \"<EOF>\" at line 0, column 0."
-        ) {
-            val input = ""
-            applyParser(input)
-        }
-    }
-
-    @Test
-    fun programWithFunctions() {
+    fun `Function Declarations`() {
         applyParser {
             Program {
                 name = "ATest"
@@ -79,7 +72,7 @@ class ParserTests {
     }
 
     @Test
-    fun programWithDeclaration() {
+    fun `Top-Level Variable Declaration`() {
         applyParser {
             Program("ATest") {
                 VariableDeclaration<JustTypes.Int> {
@@ -90,7 +83,7 @@ class ParserTests {
     }
 
     @Test
-    fun programWithDeclarationWithAssignment() {
+    fun `Top-Level Variable Declaration with Assignment`() {
         applyParser {
             Program("ATest") {
                 VariableDeclaration<JustTypes.Boolean> {
@@ -102,7 +95,7 @@ class ParserTests {
     }
 
     @Test
-    fun programWithSplitDeclarationAndAssignment() {
+    fun `Top-Level Variable Declaration with split Assignment`() {
         applyParser {
             Program("ATest") {
                 val v1 = VariableDeclaration<JustTypes.Int>("a")
@@ -114,7 +107,7 @@ class ParserTests {
     }
 
     @Test
-    fun programWithCodeInFunctions() {
+    fun `Function with code`() {
         applyParser {
             Program {
                 Function<JustTypes.Void> {
@@ -131,24 +124,12 @@ class ParserTests {
     }
 
     @Test
-    fun functionInFunctionFailing() {
-        testForParseExceptionText(
-            text = "Encountered \" \"void\" \"void \"\" at line 3, column 3."
-        ) {
-            applyParser {
-                Program {
-                    Function<JustTypes.Void> {
-                        addRaw(FunctionBuilder("insideFuncFunc", JustTypes.Void).build(1))
-                    }
-                }
-            }
-        }
-    }
-
-    @Test
-    fun functionWithParams() {
+    fun `Functions with parameters`() {
         applyParser {
             Program {
+                Function<JustTypes.Void> {
+                    param<JustTypes.Int>("param1")
+                }
                 Function<JustTypes.Void> {
                     param<JustTypes.Int>("param1")
                     param<JustTypes.Boolean>("param2")
@@ -157,8 +138,9 @@ class ParserTests {
         }
     }
 
+
     @Test
-    fun functionWithIf() {
+    fun `If Then Else`() {
         applyParser {
             Program {
                 Function<JustTypes.Void> {
@@ -181,7 +163,7 @@ class ParserTests {
     }
 
     @Test
-    fun functionWithWhile() {
+    fun `While Loops`() {
         applyParser {
             Program {
                 Function<JustTypes.Void> {
@@ -199,6 +181,34 @@ class ParserTests {
                         VariableDeclaration<JustTypes.Int>()
                     }
                 }
+            }
+        }
+    }
+
+    @Nested
+    inner class `Test for Invalid Code Examples` {
+        @Test
+        fun `(Fail) - Function Declaration inside top-level function declaration`() {
+            testForParseExceptionText(
+                text = "Encountered \" \"void\" \"void \"\" at line 3, column 3."
+            ) {
+                applyParser {
+                    Program {
+                        Function<JustTypes.Void> {
+                            addRaw(FunctionBuilder("insideFuncFunc", JustTypes.Void).build(1))
+                        }
+                    }
+                }
+            }
+        }
+
+        @Test
+        fun `(Fail) - Empty String`() {
+            testForParseExceptionText(
+                text = "Encountered \"<EOF>\" at line 0, column 0."
+            ) {
+                val input = ""
+                applyParser(input)
             }
         }
     }
