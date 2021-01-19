@@ -6,7 +6,6 @@ public class Main {
     }
 
     public static void createParser(String input) throws Exception {
-        System.out.println("input = \n" + input);
         JustParser.readInput(input);
     }
 

@@ -38,6 +38,7 @@ TOKEN : {
     <PROGRAM: "program">
     | <WHILE: "while">
     | <IF: "if">
+    | <ELSE: "else">
     | <VOID: "void">
     | <L_PARENTHESES : "(">
     | <R_PARENTHESES : ")">
@@ -50,8 +51,10 @@ TOKEN : {
     | <#LETTER: ["a"-"z", "A"-"Z"]>
     | <DIGIT: ["0"-"9"]>
     | <NUMBER: (<DIGIT>)+("." (<DIGIT>)+)?>
-    | <PRIMITIVES: "boolean" | "int" | "float">
+    | <PRIMITIVES: "boolean" | "int">
+    | <BOOLS: "true" | "false">
     | <IDENTIFIER: <LETTER>(<LETTER>|<DIGIT>)*>
+    | <CONDITIONAL_OPERATIONS: "&&" | "||">
 }
 
 
@@ -62,26 +65,65 @@ void parse() : {}
 
 void ProgramBlock() : {} {
     <PROGRAM><IDENTIFIER><L_CURLY_BRACKETS>
-        (code())*
+        (topLevelProgramDeclarations())*
     <R_CURLY_BRACKETS>
 }
 
-void code() : {} {
+void topLevelProgramDeclarations() : {} {
     LOOKAHEAD(3) Function()
-    | LOOKAHEAD(3) Assignment()
-    | LOOKAHEAD(3) VariableDeclaration()
-    | LOOKAHEAD(3) DeclarationWithAssignment()
+    | LOOKAHEAD(3) expr()
+}
+
+void functionLevleDeclarations() : {}
+{
+    expr()
+    | controlFlow()
+}
+void condExpr() : {} {
+    <BOOLS> (<CONDITIONAL_OPERATIONS> <BOOLS>)*
+}
+
+void ifThenElse() : {}
+{
+    <IF> <L_PARENTHESES> (<IDENTIFIER> | condExpr()) <R_PARENTHESES> <L_CURLY_BRACKETS>
+        (functionLevleDeclarations())*
+    <R_CURLY_BRACKETS>
+    [
+        <ELSE> <L_CURLY_BRACKETS>
+            (functionLevleDeclarations())*
+        <R_CURLY_BRACKETS>
+    ]
+}
+
+void whileLoop() : {}
+{
+    <WHILE> <L_PARENTHESES> (<IDENTIFIER> | condExpr()) <R_PARENTHESES> <L_CURLY_BRACKETS>
+         (functionLevleDeclarations())*
+    <R_CURLY_BRACKETS>
+}
+
+void controlFlow() : {}
+{
+    ifThenElse()
+    | whileLoop()
+}
+
+void expr() : {}
+{
+    LOOKAHEAD(3) Assignment()
+        | LOOKAHEAD(3) VariableDeclaration()
+        | LOOKAHEAD(3) DeclarationWithAssignment()
 }
 
 void Function() : {}
 {
      (<VOID> | <PRIMITIVES>) <IDENTIFIER> <L_PARENTHESES> <R_PARENTHESES> <L_CURLY_BRACKETS>
-
+            (functionLevleDeclarations())*
       <R_CURLY_BRACKETS>
 }
 
 void Assignment() : {} {
-    <IDENTIFIER><ASSIGN><NUMBER><SEMICOLON>
+    <IDENTIFIER><ASSIGN>(<NUMBER>|<BOOLS>)<SEMICOLON>
 }
 
 void VariableDeclaration() : {}
@@ -91,5 +133,5 @@ void VariableDeclaration() : {}
 
 void DeclarationWithAssignment() : {}
 {
-    <PRIMITIVES><IDENTIFIER> <ASSIGN> <NUMBER> <SEMICOLON>
+    <PRIMITIVES><IDENTIFIER> <ASSIGN> (<NUMBER>|<BOOLS>) <SEMICOLON>
 }

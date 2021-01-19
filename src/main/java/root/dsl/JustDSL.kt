@@ -36,11 +36,13 @@ sealed class JustTypes {
         }
     }
 
+    /*
     open class Float : JustTypes() {
         data class Val(val value: kotlin.Float) : JustTypes.Float(), ValueProvider<JustTypes.Float> {
             override fun getValueAsString() = value.toString()
         }
     }
+     */
 
     object Void : JustTypes()
 
@@ -49,7 +51,7 @@ sealed class JustTypes {
             return when (clazz) {
                 JustTypes.Boolean::class.java -> JustTypes.Boolean()
                 JustTypes.Int::class.java -> JustTypes.Int()
-                JustTypes.Float::class.java -> JustTypes.Float()
+                //JustTypes.Float::class.java -> JustTypes.Float()
                 JustTypes.Void::class.java -> JustTypes.Void
                 else -> {
                     throw IllegalArgumentException("Unrecognized Type: $clazz")
@@ -63,7 +65,7 @@ sealed class JustTypes {
         return when (this) {
             is Boolean -> "boolean"
             is Int -> "int"
-            is Float -> "float"
+            //is Float -> "float"
             Void -> "void"
         }
     }
@@ -89,6 +91,80 @@ fun Program(name: String = "unnamedProgram", content: (ProgramBuilder.() -> Unit
         content?.invoke(it)
         it.build()
     }
+}
+
+interface FunctionLevelDeclarationBuilder : JustBuilder
+class FunctionLevelDeclarationBuilderInstance : AbstractJustBuilder(), FunctionLevelDeclarationBuilder {
+    override fun build(indentLevel: Int): String {
+        return contentString(indentLevel)
+    }
+
+}
+
+fun FunctionLevelDeclarationBuilder.WhileLoop(
+    condition: String,
+    block: FunctionLevelDeclarationBuilder.() -> Unit
+) {
+    WhileLoopBuilder(condition).let {
+        block.invoke(it)
+        addBuilder(it)
+    }
+}
+
+data class WhileLoopBuilder(
+    val condition: String
+) : AbstractJustBuilder(), FunctionLevelDeclarationBuilder {
+    override fun build(indentLevel: Int): String {
+        val blockString = contentString(1)
+        return """
+            |while ($condition) {
+            |   $blockString
+            |}
+        """.trimMargin().indentAll(indentLevel)
+    }
+}
+
+fun FunctionLevelDeclarationBuilder.ifBlock(
+    condition: String,
+    thenBlock: FunctionLevelDeclarationBuilder.() -> Unit
+): IfBlockBuilder {
+    return IfBlockBuilder(condition).also {
+        FunctionLevelDeclarationBuilderInstance().let { inner ->
+            thenBlock.invoke(inner)
+            it.thenBlock = inner
+        }
+        this.addBuilder(it)
+    }
+}
+
+fun IfBlockBuilder.elseBlock(elzeBlock: FunctionLevelDeclarationBuilder.() -> Unit) {
+    FunctionLevelDeclarationBuilderInstance().let {
+        elzeBlock.invoke(it)
+        this.elzeBlock = it
+    }
+}
+
+data class IfBlockBuilder(
+    var condition: String = "missingCondition",
+    var thenBlock: FunctionLevelDeclarationBuilder? = null,
+    var elzeBlock: FunctionLevelDeclarationBuilder? = null
+) : AbstractJustBuilder(), FunctionLevelDeclarationBuilder {
+    override fun build(indentLevel: Int): String {
+        val then = thenBlock?.build(1) ?: ""
+        val elze = if (elzeBlock != null) {
+            val block = elzeBlock?.build(1) ?: ""
+            """else {
+                |$block
+                |}
+            """.trimMargin()
+        } else ""
+        return """
+            |if ($condition) {
+            |   $then
+            |} $elze
+        """.trimMargin().indentAll(indentLevel)
+    }
+
 }
 
 
@@ -177,7 +253,8 @@ abstract class AbstractJustBuilder : JustBuilder {
     }
 }
 
-data class FunctionBuilder(var name: String, private var returnType: JustTypes) : AbstractJustBuilder() {
+data class FunctionBuilder(var name: String, private var returnType: JustTypes) : AbstractJustBuilder(),
+    FunctionLevelDeclarationBuilder {
 
     override fun build(indentLevel: Int): String {
         return """

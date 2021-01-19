@@ -4,20 +4,28 @@ import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import root.dsl.Function
+import root.dsl.FunctionBuilder
 import root.dsl.JustTypes
 import root.dsl.Program
 import root.dsl.VariableAssignment
 import root.dsl.VariableDeclaration
+import root.dsl.WhileLoop
+import root.dsl.elseBlock
+import root.dsl.ifBlock
 
 class ParserTests {
     @Throws(Throwable::class)
     private fun applyParser(input: String) {
+        val lines = input.split("\n")
+        val numLength = lines.size.toString().length
+        val template = "%${numLength}d | %s"
+        println("input: \n" + lines.mapIndexed { i, s -> template.format(i, s) }.joinToString(separator = "\n"))
         Main.createParser(input)
     }
 
     @Throws(Throwable::class)
     private fun applyParser(supplier: () -> String) {
-        Main.createParser(supplier.invoke())
+        applyParser(supplier.invoke())
     }
 
     private fun testForParseExceptionText(text: String, content: () -> Unit) {
@@ -64,7 +72,6 @@ class ParserTests {
 
                 Function<JustTypes.Boolean>(name = "funBool")
                 Function<JustTypes.Int>(name = "funInt")
-                Function<JustTypes.Float>(name = "funFloat")
 
             }
         }
@@ -85,9 +92,9 @@ class ParserTests {
     fun programWithDeclarationWithAssignment() {
         applyParser {
             Program("ATest") {
-                VariableDeclaration<JustTypes.Float> {
+                VariableDeclaration<JustTypes.Boolean> {
                     name = "a"
-                    value = JustTypes.Float.Val(0.1f)
+                    value = JustTypes.Boolean.True
                 }
             }
         }
@@ -100,6 +107,84 @@ class ParserTests {
                 val v1 = VariableDeclaration<JustTypes.Int>("a")
                 VariableAssignment(v1) {
                     value = JustTypes.Int.Val(12)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun programWithCodeInFunctions() {
+        applyParser {
+            Program {
+                Function<JustTypes.Void> {
+                    val v1 = VariableDeclaration<JustTypes.Int> {
+                        name = "v1"
+                        value = JustTypes.Int.Val(47)
+                    }
+                    VariableAssignment(v1) {
+                        value = JustTypes.Int.Val(4711)
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun functionInFunctionFailing() {
+        testForParseExceptionText(
+            text = "Encountered \" \"void\" \"void \"\" at line 3, column 3."
+        ) {
+            applyParser {
+                Program {
+                    Function<JustTypes.Void> {
+                        addRaw(FunctionBuilder("insideFuncFunc", JustTypes.Void).build(1))
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun functionWithIf() {
+        applyParser {
+            Program {
+                Function<JustTypes.Void> {
+                    val cond = VariableDeclaration<JustTypes.Boolean> {
+                        name = "isEnabled"
+                        value = JustTypes.Boolean.False
+                    }
+                    ifBlock(cond.name) {
+                        VariableDeclaration<JustTypes.Int> { value = JustTypes.Int.Val(636)}
+                    }
+
+                    ifBlock("true") {
+                        VariableDeclaration<JustTypes.Int> { value = JustTypes.Int.Val(666)}
+                    }.elseBlock {
+                        VariableDeclaration<JustTypes.Boolean> { value = JustTypes.Boolean.False }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun functionWithWhile() {
+        applyParser {
+            Program {
+                Function<JustTypes.Void> {
+                    val cond = VariableDeclaration<JustTypes.Boolean> {
+                        name = "isEnabled"
+                        value = JustTypes.Boolean.False
+                    }
+                    WhileLoop(cond.name) {
+                        VariableDeclaration<JustTypes.Boolean>()
+                    }
+                    WhileLoop("true") {
+                        VariableDeclaration<JustTypes.Int>()
+                    }
+                    WhileLoop("true || false && true") {
+                        VariableDeclaration<JustTypes.Int>()
+                    }
                 }
             }
         }
