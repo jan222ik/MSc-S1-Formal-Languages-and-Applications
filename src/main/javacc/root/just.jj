@@ -3,26 +3,35 @@ options {
 }
 PARSER_BEGIN(JustParser)
 package root;
-    public class JustParser {
 
-      public JustParser() { } /** root.Main entry point. */
+import root.parser.*;
+public class JustParser {
 
-      public static JustParser instance;
 
-      public static void main(String args[]) throws ParseException {
-        //JustParser.readInput(System.in);
-      }
+  private static JustParser instance;
+  private static SymbolTable symbolTable = new SymbolTable();
 
-      public static void readInput(String input) throws ParseException {
-          instance = new JustParser(new java.io.StringReader(input));
-          instance.parse();
-      }
+  public JustParser() {
+      symbolTable = new SymbolTable();
+   } /** root.Main entry point. */
 
-      public static void resetParser() {
-          if (instance == null) return;
-          instance.ReInit(instance.token_source);
-      }
-    }
+  public static void main(String args[]) throws ParseException {
+    //JustParser.readInput(System.in);
+  }
+
+  public static void readInput(String input) throws ParseException {
+      instance = new JustParser(new java.io.StringReader(input));
+      instance.parse();
+  }
+
+  public static void resetParser() {
+      if (instance == null) return;
+      instance.ReInit(instance.token_source);
+      symbolTable = new SymbolTable();
+  }
+}
+
+
 
 PARSER_END(JustParser)
 
@@ -49,7 +58,7 @@ TOKEN : {
     | <SEMICOLON : ";">
     | <ASSIGN: "=">
     | <#LETTER: ["a"-"z", "A"-"Z"]>
-    | <DIGIT: ["0"-"9"]>
+    | <#DIGIT: ["0"-"9"]>
     | <NUMBER: (<DIGIT>)+("." (<DIGIT>)+)?>
     | <PRIMITIVES: "boolean" | "int">
     | <BOOLS: "true" | "false">
@@ -64,10 +73,15 @@ void parse() : {}
     ProgramBlock() <EOF>
 }
 
-void ProgramBlock() : {} {
-    <PROGRAM><IDENTIFIER><L_CURLY_BRACKETS>
+void ProgramBlock() : {
+    Token token;
+} {
+    token = <PROGRAM><IDENTIFIER>
+    {symbolTable.enterScope("PROGRAM");}
+    <L_CURLY_BRACKETS>
         (topLevelProgramDeclarations())*
     <R_CURLY_BRACKETS>
+    {symbolTable.leaveScope();}
 }
 
 void topLevelProgramDeclarations() : {} {
@@ -81,26 +95,28 @@ void functionLevleDeclarations() : {}
     | controlFlow()
 }
 void condExpr() : {} {
-    <BOOLS> (<CONDITIONAL_OPERATIONS> <BOOLS>)*
+    (<BOOLS> | <IDENTIFIER>) (<CONDITIONAL_OPERATIONS> (<BOOLS> | <IDENTIFIER> ))*
 }
 
-void ifThenElse() : {}
+void ifThenElse() :
+{ Token token; }
 {
-    <IF> <L_PARENTHESES> (<IDENTIFIER> | condExpr()) <R_PARENTHESES> <L_CURLY_BRACKETS>
+    token = <IF> <L_PARENTHESES> condExpr() <R_PARENTHESES> {symbolTable.enterScope("IF_THEN");} <L_CURLY_BRACKETS>
         (functionLevleDeclarations())*
-    <R_CURLY_BRACKETS>
+    <R_CURLY_BRACKETS> {symbolTable.leaveScope();}
     [
-        <ELSE> <L_CURLY_BRACKETS>
+        <ELSE> {symbolTable.enterScope("IF_ELSE");} <L_CURLY_BRACKETS>
             (functionLevleDeclarations())*
-        <R_CURLY_BRACKETS>
+        <R_CURLY_BRACKETS>{symbolTable.leaveScope();}
     ]
 }
 
-void whileLoop() : {}
+void whileLoop() :
+{ Token token;}
 {
-    <WHILE> <L_PARENTHESES> (<IDENTIFIER> | condExpr()) <R_PARENTHESES> <L_CURLY_BRACKETS>
+    token = <WHILE> <L_PARENTHESES> condExpr() <R_PARENTHESES> {symbolTable.enterScope("WHILE");} <L_CURLY_BRACKETS>
          (functionLevleDeclarations())*
-    <R_CURLY_BRACKETS>
+    <R_CURLY_BRACKETS> {symbolTable.leaveScope();}
 }
 
 void controlFlow() : {}
@@ -126,11 +142,12 @@ void params() : {}
     param() (<COMMA> param())*
 }
 
-void Function() : {}
+void Function() :
+{ Token token; }
 {
-     (<VOID> | <PRIMITIVES>) <IDENTIFIER> <L_PARENTHESES> [params()] <R_PARENTHESES> <L_CURLY_BRACKETS>
+     (token = <VOID> | token = <PRIMITIVES>) <IDENTIFIER> {symbolTable.enterScope("FUNC");} <L_PARENTHESES> [params()] <R_PARENTHESES> <L_CURLY_BRACKETS>
             (functionLevleDeclarations())*
-      <R_CURLY_BRACKETS>
+      <R_CURLY_BRACKETS>{symbolTable.leaveScope();}
 }
 
 void Assignment() : {} {

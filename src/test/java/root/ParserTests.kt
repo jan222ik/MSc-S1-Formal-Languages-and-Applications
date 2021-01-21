@@ -1,9 +1,10 @@
 package root
 
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInfo
 import org.junit.jupiter.api.fail
 import root.dsl.Function
 import root.dsl.FunctionBuilder
@@ -15,6 +16,7 @@ import root.dsl.WhileLoop
 import root.dsl.elseBlock
 import root.dsl.ifBlock
 import root.dsl.param
+
 
 @Throws(Throwable::class)
 private fun applyParser(input: String) {
@@ -41,11 +43,21 @@ private fun testForParseExceptionText(text: String, content: () -> Unit) {
     }
 }
 
+
 class ParserTests {
 
     @BeforeEach
-    fun resetParser() {
+    fun resetParser(info: TestInfo) {
         Main.restParser()
+        println("=".repeat(80))
+        println("Test: ${info.displayName}")
+        println("-".repeat(80))
+    }
+
+    @AfterEach
+    fun afterEach() {
+        println("=".repeat(80))
+        println()
     }
 
     @Test
@@ -56,7 +68,7 @@ class ParserTests {
     }
 
     @Test
-    fun `Function Declarations`() {
+    fun `Top-Level Function Declarations`() {
         applyParser {
             Program {
                 name = "ATest"
@@ -149,11 +161,11 @@ class ParserTests {
                         value = JustTypes.Boolean.False
                     }
                     ifBlock(cond.name) {
-                        VariableDeclaration<JustTypes.Int> { value = JustTypes.Int.Val(636)}
+                        VariableDeclaration<JustTypes.Int> { value = JustTypes.Int.Val(636) }
                     }
 
                     ifBlock("true") {
-                        VariableDeclaration<JustTypes.Int> { value = JustTypes.Int.Val(666)}
+                        VariableDeclaration<JustTypes.Int> { value = JustTypes.Int.Val(666) }
                     }.elseBlock {
                         VariableDeclaration<JustTypes.Boolean> { value = JustTypes.Boolean.False }
                     }
@@ -180,12 +192,14 @@ class ParserTests {
                     WhileLoop("true || false && true") {
                         VariableDeclaration<JustTypes.Int>()
                     }
+                    WhileLoop("${cond.name} && ${cond.name} || false")
                 }
             }
         }
     }
 
     @Nested
+    @Suppress("ClassName")
     inner class `Test for Invalid Code Examples` {
         @Test
         fun `(Fail) - Function Declaration inside top-level function declaration`() {

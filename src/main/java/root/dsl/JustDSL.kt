@@ -103,10 +103,10 @@ class FunctionLevelDeclarationBuilderInstance : AbstractJustBuilder(), FunctionL
 
 fun FunctionLevelDeclarationBuilder.WhileLoop(
     condition: String,
-    block: FunctionLevelDeclarationBuilder.() -> Unit
+    block: (FunctionLevelDeclarationBuilder.() -> Unit)? = null
 ) {
     WhileLoopBuilder(condition).let {
-        block.invoke(it)
+        block?.invoke(it)
         addBuilder(it)
     }
 }
