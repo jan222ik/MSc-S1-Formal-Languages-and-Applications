@@ -49,6 +49,7 @@ TOKEN : {
     | <IF: "if">
     | <ELSE: "else">
     | <VOID: "void">
+    | <RETURN: "return">
     | <L_PARENTHESES : "(">
     | <R_PARENTHESES : ")">
     | <L_SQUARE_BRACKETS : "[">
@@ -73,12 +74,10 @@ void parse() : {}
     ProgramBlock() <EOF>
 }
 
-void ProgramBlock() : {
-    Token token;
-} {
-    token = <PROGRAM><IDENTIFIER>
-    {symbolTable.enterScope("PROGRAM");}
-    <L_CURLY_BRACKETS>
+void ProgramBlock() : {}
+{
+    <PROGRAM><IDENTIFIER>
+    {symbolTable.enterScope("PROGRAM");} <L_CURLY_BRACKETS>
         (topLevelProgramDeclarations())*
     <R_CURLY_BRACKETS>
     {symbolTable.leaveScope();}
@@ -112,9 +111,9 @@ void ifThenElse() :
 }
 
 void whileLoop() :
-{ Token token;}
+{}
 {
-    token = <WHILE> <L_PARENTHESES> condExpr() <R_PARENTHESES> {symbolTable.enterScope("WHILE");} <L_CURLY_BRACKETS>
+    <WHILE> <L_PARENTHESES> condExpr() <R_PARENTHESES> {symbolTable.enterScope("WHILE");} <L_CURLY_BRACKETS>
          (functionLevleDeclarations())*
     <R_CURLY_BRACKETS> {symbolTable.leaveScope();}
 }
@@ -142,12 +141,22 @@ void params() : {}
     param() (<COMMA> param())*
 }
 
+Symbol FunctionHeader() : { Token funcRType, funcName; } {
+    (funcRType = <VOID> | funcRType = <PRIMITIVES>) funcName = <IDENTIFIER>
+    { return new Symbol(true, 0, 0); }
+}
+
 void Function() :
-{ Token token; }
+{ Symbol symbol; }
 {
-     (token = <VOID> | token = <PRIMITIVES>) <IDENTIFIER> {symbolTable.enterScope("FUNC");} <L_PARENTHESES> [params()] <R_PARENTHESES> <L_CURLY_BRACKETS>
+     symbol = FunctionHeader() {symbolTable.insert(symbol); symbolTable.enterScope("FUNC");}
+      <L_PARENTHESES> [params()] <R_PARENTHESES> <L_CURLY_BRACKETS>
             (functionLevleDeclarations())*
-      <R_CURLY_BRACKETS>{symbolTable.leaveScope();}
+            [<RETURN> (<NUMBER> | condExpr())? <SEMICOLON>]
+      <R_CURLY_BRACKETS>
+     {
+        symbolTable.leaveScope();
+     }
 }
 
 void Assignment() : {} {

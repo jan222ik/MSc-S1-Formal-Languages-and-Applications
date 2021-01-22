@@ -10,6 +10,7 @@ import root.dsl.Function
 import root.dsl.FunctionBuilder
 import root.dsl.JustTypes
 import root.dsl.Program
+import root.dsl.Return
 import root.dsl.VariableAssignment
 import root.dsl.VariableDeclaration
 import root.dsl.WhileLoop
@@ -145,6 +146,31 @@ class ParserTests {
                 Function<JustTypes.Void> {
                     param<JustTypes.Int>("param1")
                     param<JustTypes.Boolean>("param2")
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `Functions with return`() {
+        applyParser {
+            Program {
+                Function<JustTypes.Boolean> {
+                    param<JustTypes.Int>("param1")
+                    Return(JustTypes.Boolean.True)
+                }
+                Function<JustTypes.Int> {
+                    param<JustTypes.Int>("param1")
+                    param<JustTypes.Boolean>("param2")
+                    Return(JustTypes.Int.Val(4711))
+                }
+                Function<JustTypes.Int> {
+                    val var01 = VariableDeclaration(value = JustTypes.Int.Val(4711))
+                    Return(var01)
+                }
+
+                Function<JustTypes.Void> {
+                    Return()
                 }
             }
         }

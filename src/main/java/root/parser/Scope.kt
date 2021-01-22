@@ -9,4 +9,3 @@ data class Scope(var name: String, var level: Int, var nrOfParams: Int, var nrOf
     val locals: MutableList<Symbol> = mutableListOf()
 }
 
-data class Symbol(var isInit: Boolean, var value: Int, var addr: Int)

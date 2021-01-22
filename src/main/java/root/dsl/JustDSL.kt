@@ -19,6 +19,11 @@ interface ValueProvider<T> {
     fun getValueAsString(): String?
 }
 
+
+class ValueProviderOverride<T>(private val override: String) : ValueProvider<T> {
+    override fun getValueAsString(): String = override
+}
+
 sealed class JustTypes {
     open class Boolean : JustTypes() {
         object True : JustTypes.Boolean(), ValueProvider<JustTypes.Boolean> {
@@ -167,13 +172,25 @@ data class IfBlockBuilder(
 
 }
 
+inline fun <reified T : JustTypes> FunctionBuilder<T>.Return() {
+    this.value = ValueProviderOverride("")
+}
+
+inline fun <reified T : JustTypes> FunctionBuilder<T>.Return(value: ValueProvider<T>) {
+    this.value = value
+}
+
+inline fun <reified T : JustTypes> FunctionBuilder<T>.Return(varName: VariableBuilder<T>) {
+    this.value = ValueProviderOverride(varName.name)
+}
+
 
 inline fun <reified T : JustTypes> ProgramBuilder.Function(
     name: String = "unnamedFunction",
-    noinline content: (FunctionBuilder.() -> Unit)? = null
+    noinline content: (FunctionBuilder<T>.() -> Unit)? = null,
 ) {
     val type = JustTypes.resolve(T::class.java)
-    FunctionBuilder(name, type).let {
+    FunctionBuilder(name, type as T).let {
         content?.invoke(it)
         addBuilder(it)
     }
@@ -254,7 +271,7 @@ abstract class AbstractJustBuilder : JustBuilder {
 
 typealias ParamPair = Pair<String, JustTypes>
 
-inline fun <reified T : JustTypes> FunctionBuilder.param(name: String) {
+inline fun <reified T : JustTypes> FunctionBuilder<*>.param(name: String) {
     val type = JustTypes.resolve(T::class.java)
     this.addToParamList(name to type)
 }
@@ -265,15 +282,13 @@ data class ParamBuilder(
     override fun build(indentLevel: Int): String {
         return parameters.joinToString(", ") { "${it.second.codeString()} ${it.first}" }
     }
-
-
-
 }
 
 
-data class FunctionBuilder(
+data class FunctionBuilder<T : JustTypes>(
     var name: String,
-    private var returnType: JustTypes,
+    private var returnType: T,
+    var value: ValueProvider<T>? = null
 ) : AbstractJustBuilder(),
     FunctionLevelDeclarationBuilder {
 
@@ -281,9 +296,11 @@ data class FunctionBuilder(
 
     override fun build(indentLevel: Int): String {
         val paramString = paramBuilder.build(0)
+        val retValue = value?.getValueAsString()?.let { "return $it;".indentAll(1) } ?: ""
         return """
             |${returnType.codeString()} $name($paramString) {
             |${contentString(1)}
+            |${retValue}
             |}
         """.trimMargin().indentAll(indentLevel)
     }

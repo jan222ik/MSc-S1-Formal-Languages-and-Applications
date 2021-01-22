@@ -22,6 +22,7 @@ tasks.test {
 dependencies {
     implementation(kotlin("stdlib"))
     compile(files("$buildDir/classes/java/main/"))
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.4.2")
     testImplementation(platform("org.junit:junit-bom:5.7.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
 }

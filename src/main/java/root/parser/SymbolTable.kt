@@ -24,6 +24,7 @@ class SymbolTable {
     }
 
     fun insert(symbol: Symbol) {
+        println("Insert Symbol $symbol into ${curScope?.name}")
         curScope?.addSymbol(symbol) ?: throw RuntimeException("There is no scope a symbol could be added to.")
     }
 
